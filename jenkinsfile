@@ -1,74 +1,55 @@
-pipeline{
+pipeline {
     agent any
-    tools{
-        jdk 'jdk17'
-        nodejs 'node23'
-    }
+
     environment {
-        SCANNER_HOME=tool 'sonar-scanner'
+        DOCKERHUB_CREDENTIALS = credentials('anikesh372') // Jenkins credentials
+        DOCKER_IMAGE = 'anikesh372/zomato:latest'
+        NODE_ENV = 'production'
     }
+
     stages {
-        stage('clean workspace'){
-            steps{
-                cleanWs()
-            }
-        }
-        stage('Checkout from Git'){
-            steps{
-                git 'https://github.com/KastroVKiran/DevOps-Project-Swiggy.git'
-            }
-        }
-        stage("Sonarqube Analysis "){
-            steps{
-                withSonarQubeEnv('sonar-server') {
-                    sh ''' $SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=Swiggy \
-                    -Dsonar.projectKey=Swiggy '''
-                }
-            }
-        }
-        stage("quality gate"){
-           steps {
-                script {
-                    waitForQualityGate abortPipeline: false, credentialsId: 'Sonar-token' 
-                }
-            } 
-        }
-        stage('Install Dependencies') {
+
+        stage('Checkout Code') {
             steps {
-                sh "npm install"
+                git branch: 'master', url: 'https://github.com/Anikesh-developer/DevOps-Project-Zomato.git'
             }
         }
-        stage('OWASP FS SCAN') {
+
+        stage('Install NPM Packages') {
             steps {
-                dependencyCheck additionalArguments: '--scan ./ --disableYarnAudit --disableNodeAudit', odcInstallation: 'DP-Check'
-                dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
+                sh 'npm install'
+                
             }
         }
-        stage('TRIVY FS SCAN') {
+
+        stage('Build Docker Image') {
             steps {
-                sh "trivy fs . > trivyfs.txt"
+                sh "docker build -t ${DOCKER_IMAGE} ."
             }
         }
-        stage("Docker Build & Push"){
-            steps{
-                script{
-                   withDockerRegistry(credentialsId: 'docker-creds', toolName: 'docker'){   
-                       sh "docker build -t swiggy ."
-                       sh "docker tag swiggy kastrov/swiggy:latest "
-                       sh "docker push kastrov/swiggy:latest "
-                    }
-                }
+
+        stage('Docker Login') {
+            steps {
+                sh "echo ${DOCKERHUB_CREDENTIALS_PSW} | docker login -u ${DOCKERHUB_CREDENTIALS_USR} --password-stdin"
             }
         }
-        stage("TRIVY"){
-            steps{
-                sh "trivy image kastrov/swiggy:latest > trivy.txt" 
+
+        stage('Push Docker Image') {
+            steps {
+                sh "docker push ${DOCKER_IMAGE}"
             }
         }
-        stage('Deploy to container'){
-            steps{
-                sh 'docker run -d --name swiggy -p 3000:3000 kastrov/swiggy:latest'
-            }
+    }
+
+    post {
+        always {
+            sh 'docker logout'
+        }
+        success {
+            echo 'Pipeline completed successfully!'
+        }
+        failure {
+            echo 'Pipeline failed!'
         }
     }
 }
