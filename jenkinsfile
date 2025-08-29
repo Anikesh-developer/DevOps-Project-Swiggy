@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         DOCKERHUB_CREDENTIALS = credentials('anikesh372') // Jenkins credentials
-        DOCKER_IMAGE = 'anikesh372/zomato:latest'
+        DOCKER_IMAGE = 'anikesh372/swiggy:latest'
         NODE_ENV = 'production'
     }
 
@@ -11,7 +11,7 @@ pipeline {
 
         stage('Checkout Code') {
             steps {
-                git branch: 'master', url: 'https://github.com/Anikesh-developer/DevOps-Project-Zomato.git'
+                git branch: 'master', url: 'https://github.com/Anikesh-developer/DevOps-Project-Swiggy.git'
             }
         }
 
