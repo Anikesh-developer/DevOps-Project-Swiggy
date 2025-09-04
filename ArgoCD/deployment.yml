@@ -21,7 +21,7 @@ spec:
           # - Each init container must complete successfully before the next one starts.
       containers:
       - name:  swiggy
-        image:  docker.io/anikesh372/
+        image:  docker.io/anikesh372/swiggy:latest
         resources:
           requests:
             cpu: 100m
